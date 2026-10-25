@@ -1,10 +1,10 @@
 # Politique de sécurité — MR LOCK Website
 
-> Ce document décrit les règles de sécurité du dépôt public `mr-lock-website` et la manière de signaler une vulnérabilité.
+> Politique de sécurité du dépôt public `mr-lock-website`. Ce document définit les exigences de sécurité attendues, les contrôles à appliquer avant déploiement et la procédure de signalement d'une vulnérabilité.
 
-## 1. Objectif
+## 1. Périmètre et objectif
 
-Le site MR LOCK est un actif public pouvant évoluer vers un écosystème comprenant :
+Le projet peut évoluer vers un écosystème comprenant :
 
 - site vitrine et personal branding ;
 - produits digitaux ;
@@ -14,13 +14,17 @@ Le site MR LOCK est un actif public pouvant évoluer vers un écosystème compre
 - intégrations tierces ;
 - éventuellement des espaces authentifiés.
 
-La sécurité doit donc être intégrée dès la conception et non ajoutée après coup.
+La sécurité doit être intégrée à la conception, au développement, au déploiement et à la maintenance.
 
-## 2. Principe fondamental
+Cette politique décrit les contrôles attendus ; elle ne prétend pas prouver que chaque contrôle est déjà implémenté. L'état réel du dépôt et de l'application doit toujours être vérifié.
 
-**Tout ce qui arrive du navigateur, d'un utilisateur ou d'un service externe doit être considéré comme non fiable jusqu'à validation côté serveur.**
+## 2. Principe fondamental : ne jamais faire confiance au client
 
-L'interface utilisateur ne constitue jamais une preuve d'autorisation, de paiement ou de propriété.
+**Tout ce qui arrive du navigateur, d'un utilisateur ou d'un service externe doit être considéré comme non fiable jusqu'à validation appropriée.**
+
+L'interface utilisateur ne constitue jamais une preuve d'autorisation, de paiement, d'identité ou de propriété.
+
+Toute règle de sécurité importante doit être appliquée sur une frontière de confiance appropriée, généralement côté serveur.
 
 ## 3. Secrets et variables d'environnement
 
@@ -34,40 +38,49 @@ Ne jamais publier dans Git :
 - identifiants de base de données ;
 - credentials OAuth ;
 - secrets Vercel ou autres plateformes ;
+- mots de passe ;
 - fichiers `.env` contenant des valeurs réelles.
 
-Utiliser des variables d'environnement et fournir uniquement les noms nécessaires dans un fichier `.env.example`.
+Utiliser des variables d'environnement et fournir uniquement les noms nécessaires dans `.env.example`.
+
+### Secret exposé
 
 Si un secret est accidentellement publié :
 
-1. considérer le secret comme compromis ;
-2. le révoquer/faire tourner immédiatement chez le fournisseur concerné ;
-3. supprimer sa présence du code courant ;
-4. vérifier les journaux et usages lorsque le fournisseur le permet ;
-5. ne pas considérer un simple nouveau commit comme une révocation du secret exposé dans l'historique Git.
+1. considérer le secret comme compromis immédiatement ;
+2. le révoquer ou le faire tourner chez le fournisseur ;
+3. supprimer la valeur du code courant ;
+4. rechercher son exposition dans l'historique Git ;
+5. vérifier les usages/journaux lorsque le fournisseur le permet ;
+6. considérer l'incident comme clos uniquement après rotation et vérification appropriées.
+
+Supprimer un secret dans un nouveau commit ne révoque pas le secret déjà exposé dans l'historique.
 
 ## 4. Paiements
 
-Pour toute intégration FedaPay ou autre prestataire de paiement :
+Pour FedaPay ou tout autre prestataire :
 
 - les clés secrètes restent côté serveur ;
-- le montant et le produit doivent être déterminés/validés côté serveur ;
-- le statut d'une transaction doit être vérifié côté serveur ;
-- les webhooks doivent être authentifiés selon la documentation officielle du fournisseur ;
-- le traitement d'un webhook doit être idempotent ;
-- une URL de retour navigateur ne doit jamais suffire à débloquer un produit ;
-- une notification provenant du client ne doit jamais être considérée comme une preuve de paiement.
+- le produit, le prix, la devise et l'état de la commande sont déterminés ou validés côté serveur ;
+- le statut de transaction est vérifié côté serveur ;
+- les webhooks sont authentifiés selon la documentation officielle actuelle du fournisseur ;
+- les traitements de paiement et de livraison sont idempotents ;
+- une URL de retour navigateur ne suffit jamais à débloquer un produit ;
+- une notification client ne constitue jamais une preuve de paiement ;
+- les événements répétés, retardés ou reçus dans un ordre inattendu sont traités sans double livraison.
 
 ## 5. Authentification et autorisation
 
 Si une authentification est ajoutée :
 
 - appliquer le principe du moindre privilège ;
-- vérifier les permissions côté serveur ;
+- vérifier l'autorisation côté serveur pour chaque opération sensible ;
 - ne jamais considérer une route masquée comme protégée ;
-- protéger les opérations sensibles contre les accès directs ;
-- éviter de révéler des informations permettant d'énumérer des comptes ou ressources privés ;
-- invalider correctement les sessions et tokens lors de leur expiration ou révocation.
+- protéger les opérations administratives contre les accès directs ;
+- éviter l'énumération inutile de comptes ou ressources ;
+- gérer correctement expiration, rotation et révocation des sessions/tokens ;
+- limiter les tentatives lorsque le contexte le justifie ;
+- ne jamais stocker de mots de passe en clair.
 
 ## 6. Validation des entrées
 
@@ -81,92 +94,135 @@ Valider côté serveur toutes les données provenant de :
 - uploads ;
 - intégrations tierces.
 
-Les validations doivent couvrir au minimum le type, le format, la taille et les valeurs autorisées lorsqu'elles sont connues.
+Les validations doivent couvrir, lorsque pertinent :
+
+- type ;
+- structure ;
+- format ;
+- longueur/taille ;
+- valeurs autorisées ;
+- limites métier ;
+- encodage.
+
+Rejeter les entrées invalides sans divulguer de détails internes.
 
 ## 7. XSS et contenu utilisateur
 
-Tout contenu fourni par un utilisateur doit être échappé ou rendu via un mécanisme sûr.
+Tout contenu fourni par un utilisateur doit être échappé, nettoyé ou rendu via un mécanisme sûr adapté au contexte.
 
-Éviter l'injection HTML arbitraire et l'utilisation non nécessaire de mécanismes permettant l'exécution de HTML/JavaScript fourni dynamiquement.
+Éviter l'injection HTML arbitraire et les mécanismes d'exécution dynamique non nécessaires.
 
-Ne jamais injecter directement du contenu utilisateur dans :
+Ne jamais injecter directement une entrée utilisateur non fiable dans :
 
 - HTML ;
 - JavaScript ;
 - attributs sensibles ;
 - requêtes SQL ;
-- commandes système.
+- commandes système ;
+- templates interprétés.
 
 ## 8. Injection et accès aux données
 
-Les requêtes vers une base de données ou un service externe doivent utiliser des mécanismes paramétrés ou structurés adaptés.
+Utiliser des requêtes paramétrées, des ORM sûrs ou des APIs structurées adaptées.
 
-Ne jamais construire une requête sensible en concaténant directement une entrée utilisateur non validée.
+Ne jamais construire une requête sensible par concaténation directe d'une entrée utilisateur non validée.
 
-Limiter également les données retournées par les APIs au strict nécessaire.
+Appliquer également le principe du moindre privilège aux comptes et services ayant accès aux données.
+
+Les APIs ne doivent retourner que les données nécessaires à l'opération demandée.
 
 ## 9. CSRF et actions sensibles
 
 Les opérations modifiant des données ou déclenchant une action importante doivent être protégées contre les requêtes non autorisées lorsque le mécanisme d'authentification utilisé le nécessite.
 
-Les actions sensibles doivent vérifier :
+Pour toute action sensible, vérifier :
 
 - identité ;
 - autorisation ;
 - validité de la requête ;
-- état courant de la ressource.
+- état courant de la ressource ;
+- éventuelle protection contre le rejeu.
 
 ## 10. Webhooks
 
-Tout webhook doit être traité comme une entrée externe non fiable.
+Tout webhook est une entrée externe non fiable.
 
 Avant traitement :
 
 1. vérifier son authenticité/signature selon le fournisseur ;
-2. valider sa structure ;
+2. valider sa structure et ses types ;
 3. vérifier les identifiants attendus ;
 4. rendre le traitement idempotent ;
-5. éviter de faire confiance aveuglément aux valeurs fournies ;
-6. journaliser suffisamment pour diagnostiquer un incident sans enregistrer de secrets.
+5. empêcher qu'un payload client falsifie l'état métier ;
+6. gérer les doublons et les événements hors ordre ;
+7. journaliser suffisamment pour diagnostiquer sans enregistrer de secrets.
 
 ## 11. Uploads
 
-Si le site accepte un jour des fichiers :
+Si le site accepte des fichiers :
 
 - limiter la taille ;
 - limiter les types autorisés ;
-- ne pas faire confiance uniquement à l'extension ;
-- éviter de rendre directement exécutables les fichiers uploadés ;
-- stocker les fichiers selon un modèle d'accès contrôlé ;
-- utiliser des noms générés plutôt que des noms fournis directement par l'utilisateur.
+- valider le contenu, pas uniquement l'extension ;
+- générer des noms de fichiers sûrs ;
+- éviter l'exécution directe des fichiers uploadés ;
+- utiliser un stockage et des permissions adaptés ;
+- contrôler les téléchargements et URLs d'accès ;
+- envisager un scan antivirus/malware selon le risque.
 
 ## 12. Headers et navigateur
 
-Lorsque l'architecture le permet, appliquer une politique de sécurité HTTP adaptée au site, notamment :
+Lorsque l'architecture le permet, appliquer des politiques HTTP adaptées, notamment :
 
-- Content Security Policy ;
-- HSTS lorsque HTTPS est garanti ;
+- Content-Security-Policy ;
+- Strict-Transport-Security lorsque HTTPS est garanti ;
 - X-Content-Type-Options ;
 - Referrer-Policy ;
 - permissions/politiques navigateur adaptées aux besoins réels.
 
-Une politique stricte ne doit pas être ajoutée aveuglément : elle doit être testée avec les scripts, fonts, images, analytics et services réellement utilisés.
+Tester les headers avec les scripts, fonts, images, analytics et services réellement utilisés. Ne pas déployer une CSP aveuglément.
 
-## 13. Dépendances
+## 13. CORS, cookies et sessions
+
+Si une API ou une authentification est ajoutée :
+
+- limiter CORS aux origines nécessaires ;
+- éviter `*` lorsque des credentials sont impliqués ;
+- utiliser des cookies `Secure` lorsque HTTPS est disponible ;
+- utiliser `HttpOnly` pour les cookies qui ne doivent pas être accessibles au JavaScript ;
+- choisir `SameSite` selon le besoin réel ;
+- ne pas stocker inutilement des secrets persistants dans `localStorage`.
+
+## 14. Rate limiting et abus
+
+Les endpoints exposés publiquement doivent être évalués contre :
+
+- spam de formulaires ;
+- brute force ;
+- création massive de transactions ;
+- appels API excessifs ;
+- abus de ressources coûteuses ;
+- répétition de webhooks ou actions métier.
+
+Ajouter du rate limiting, des quotas ou des contrôles anti-abus lorsque le risque le justifie.
+
+## 15. Dépendances et chaîne d'approvisionnement
 
 Avant d'ajouter une dépendance :
 
 - vérifier qu'elle est réellement nécessaire ;
-- préférer des versions maintenues ;
-- éviter les packages abandonnés ou excessivement puissants ;
-- surveiller les vulnérabilités connues ;
-- limiter les dépendances inutiles afin de réduire la surface d'attaque.
+- préférer une version maintenue ;
+- vérifier les vulnérabilités connues ;
+- évaluer les dépendances transitives lorsque le risque le justifie ;
+- vérifier la licence ;
+- conserver les lockfiles ;
+- éviter les scripts distants arbitraires et les actions CI non maîtrisées.
 
-Les lockfiles doivent être conservés lorsqu'ils font partie du workflow du projet.
+Les dépendances doivent être mises à jour selon un processus contrôlé et les changements majeurs doivent être testés.
 
-## 14. Protection des données
+## 16. Protection des données
 
-Ne collecter que les données nécessaires à une finalité clairement définie.
+Ne collecter que les données nécessaires à une finalité définie.
 
 Éviter de stocker inutilement :
 
@@ -175,13 +231,13 @@ Ne collecter que les données nécessaires à une finalité clairement définie.
 - informations de paiement sensibles ;
 - tokens ou secrets dans les logs.
 
-Les données sensibles ne doivent pas être exposées dans les URLs lorsque cela peut être évité.
+Les données sensibles ne doivent pas être placées dans les URLs lorsque cela peut être évité.
 
-## 15. Logs
+## 17. Logs, erreurs et observabilité
 
-Les logs doivent aider au diagnostic sans devenir une fuite d'informations.
+Les logs doivent permettre le diagnostic sans devenir une fuite d'informations.
 
-Ne pas journaliser en clair :
+Ne jamais journaliser en clair :
 
 - mots de passe ;
 - tokens ;
@@ -189,63 +245,102 @@ Ne pas journaliser en clair :
 - secrets de webhook ;
 - données de paiement sensibles.
 
-## 16. Erreurs
+Les erreurs publiques ne doivent pas révéler :
 
-Les messages d'erreur publics doivent rester suffisamment génériques pour ne pas révéler :
-
-- secrets ;
 - stack traces internes ;
-- chemins de fichiers sensibles ;
+- chemins sensibles ;
 - credentials ;
+- secrets ;
 - détails inutiles sur l'infrastructure.
 
-Les détails de diagnostic doivent rester côté serveur lorsque cela est nécessaire.
+Conserver les détails de diagnostic côté serveur lorsque nécessaire.
 
-## 17. Sécurité du dépôt GitHub
+## 18. Sécurité GitHub et CI/CD
 
 Le dépôt étant public :
 
 - aucun secret ne doit être commit ;
 - les fichiers de configuration locale doivent être ignorés ;
 - les workflows GitHub Actions doivent utiliser des permissions minimales ;
-- les actions tierces doivent être choisies avec prudence ;
-- les dépendances doivent être maintenues ;
+- les secrets CI doivent être stockés dans le mécanisme de secrets approprié ;
+- les actions tierces doivent être choisies et versionnées avec prudence ;
+- les dépendances doivent être surveillées ;
 - les changements sensibles doivent être revus avant déploiement.
 
-Lorsque le dépôt sera suffisamment mature, envisager également les protections de branche et les contrôles automatisés adaptés au niveau de risque du projet.
+Lorsque le projet sera suffisamment mature, activer des protections de branche et contrôles automatisés adaptés au niveau de risque.
 
-## 18. Revue de sécurité avant déploiement
+## 19. Checklist avant déploiement
 
-Pour toute fonctionnalité sensible, vérifier au minimum :
+### Code et données
 
-- [ ] aucune clé ou donnée sensible dans le code ;
-- [ ] entrées validées côté serveur ;
-- [ ] permissions vérifiées côté serveur ;
-- [ ] erreurs contrôlées ;
-- [ ] secrets absents des logs ;
-- [ ] dépendances à jour ou risque connu documenté ;
-- [ ] paiements vérifiés côté serveur ;
-- [ ] webhooks authentifiés et idempotents ;
-- [ ] headers de sécurité adaptés ;
-- [ ] tests/build exécutés lorsque disponibles.
+- [ ] Aucun secret ou credential dans le dépôt.
+- [ ] Aucun secret dans les logs.
+- [ ] Entrées externes validées aux frontières.
+- [ ] Sorties sensibles limitées au strict nécessaire.
+- [ ] Autorisations vérifiées côté serveur.
+- [ ] Erreurs contrôlées.
 
-## 19. Signaler une vulnérabilité
+### Paiements et webhooks
+
+- [ ] Prix, devise et produit validés côté serveur.
+- [ ] Paiement vérifié côté serveur.
+- [ ] Webhook authentifié.
+- [ ] Webhook idempotent.
+- [ ] Double livraison empêchée.
+- [ ] Retour navigateur non utilisé comme preuve de paiement.
+
+### Infrastructure
+
+- [ ] HTTPS actif.
+- [ ] Headers de sécurité adaptés.
+- [ ] CORS restreint si applicable.
+- [ ] Rate limiting/anti-abus évalué.
+- [ ] Dépendances et lockfile vérifiés.
+- [ ] CI/CD sans privilèges inutiles.
+
+### Validation
+
+- [ ] Tests disponibles exécutés.
+- [ ] Lint exécuté si configuré.
+- [ ] Type-check exécuté si configuré.
+- [ ] Build de production exécuté si applicable.
+- [ ] Revue manuelle des changements sensibles effectuée.
+
+## 20. Procédure de réponse à incident
+
+En cas d'incident de sécurité :
+
+1. Contenir l'incident sans détruire les éléments utiles au diagnostic.
+2. Révoquer/faire tourner les secrets compromis.
+3. Identifier les systèmes et données potentiellement concernés.
+4. Examiner les logs disponibles.
+5. Corriger la cause racine.
+6. Déployer le correctif de manière contrôlée.
+7. Vérifier que le vecteur d'attaque est fermé.
+8. Documenter l'incident et les actions correctives.
+9. Informer les parties concernées lorsque cela est requis.
+
+Ne pas poursuivre une exploitation après démonstration d'une vulnérabilité.
+
+## 21. Signaler une vulnérabilité
 
 Ne publiez pas les détails d'une vulnérabilité non corrigée dans une issue publique.
 
-Pour un problème de sécurité, contactez directement le mainteneur du projet via un canal privé associé au compte GitHub `iamrlock` et fournissez :
+Pour un problème de sécurité, contactez directement le mainteneur via un canal privé associé au compte GitHub `iamrlock`.
 
-- une description claire du problème ;
+Fournissez autant que possible :
+
+- une description claire ;
 - les étapes de reproduction ;
 - l'impact potentiel ;
-- les conditions nécessaires à l'exploitation ;
-- toute preuve de concept raisonnable et non destructive ;
-- une suggestion de correction si vous en avez une.
+- les préconditions ;
+- une preuve de concept raisonnable et non destructive ;
+- une suggestion de correction si disponible.
 
-Ne tentez pas d'accéder à des données qui ne vous appartiennent pas, de dégrader le service, de supprimer des données ou de poursuivre une exploitation après avoir démontré le problème.
+N'accédez pas à des données qui ne vous appartiennent pas, ne dégradez pas le service et ne supprimez aucune donnée.
 
-## 20. Limites de cette politique
+## 22. Limites
 
-Ce document décrit les pratiques de sécurité attendues dans le dépôt. Il ne constitue pas une garantie de sécurité absolue.
+Cette politique décrit les pratiques attendues. Elle ne constitue pas une garantie de sécurité absolue et ne prouve pas qu'un contrôle est effectivement déployé.
 
-Toute nouvelle fonctionnalité importante — notamment authentification, paiement, stockage de données personnelles, téléchargement de fichiers ou intégration d'API — doit déclencher une revue de sécurité spécifique.
+Toute nouvelle fonctionnalité importante — notamment authentification, paiement, stockage de données personnelles, upload de fichiers ou intégration d'API — doit déclencher une revue de sécurité spécifique.
