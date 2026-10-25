@@ -15,17 +15,19 @@ The website is a business asset, not a generic developer portfolio. It should co
 - Digital products and e-commerce
 - A premium, editorial, futuristic and human brand
 
-The guiding principle is: **build with tech, think in business, move like a hustler.**
+Guiding principle: **build with tech, think in business, move like a hustler.**
 
-## Current repository state
+## Repository truth
 
-At the time this file was created, the repository contains the initial project README and does not yet contain the application source code. Do not pretend that an implementation exists when it does not.
+This document must describe the repository as it actually exists. Never claim that an application, test suite, CI pipeline, payment integration, security control, or deployment exists unless it has been verified.
+
+At the time of this revision, the repository contains documentation and the initial README; application source code has not yet been verified in the repository.
 
 ## Engineering principles
 
 ### 1. Production quality by default
 
-Every implementation must be treated as production code unless explicitly marked as a prototype.
+Treat implementation work as production code unless explicitly marked as a prototype.
 
 Prioritize:
 
@@ -41,47 +43,73 @@ Prioritize:
 
 Do not add complexity merely to appear sophisticated.
 
-### 2. Prefer the simplest robust solution
+### 2. Simplest robust solution
 
 Avoid premature abstractions, unnecessary dependencies, speculative architecture, and over-engineering.
 
-A feature should be implemented with the smallest reliable surface area that can scale when real requirements appear.
+Choose the smallest reliable implementation that can evolve when real requirements appear.
 
-### 3. Never expose secrets
+### 3. Inspect before modifying
 
-Never commit:
+Before changing a file:
+
+1. Read the relevant existing code and configuration.
+2. Identify current conventions and dependencies.
+3. Check whether the requested behavior already exists.
+4. Make the smallest coherent change.
+5. Review the resulting diff for unrelated modifications.
+
+Never overwrite working behavior without understanding it first.
+
+### 4. Secrets and trust boundaries
+
+Never commit or expose:
 
 - API keys
 - Access tokens
 - Private keys
 - Payment secrets
-- Database credentials
 - Webhook secrets
+- Database credentials
 - OAuth client secrets
-- `.env` files containing secrets
 - Personal access tokens
+- Real `.env` files
 
-Use environment variables and document required variable names in `.env.example` without real values.
+Use environment variables. Provide variable names, never real values, in `.env.example`.
 
-### 4. Client/server boundaries must be explicit
+Treat browser input, third-party responses, webhooks, and uploaded files as untrusted until validated server-side.
 
-Secrets and privileged operations must remain server-side.
+### 5. Client/server boundaries
+
+Privileged operations and secrets must remain server-side.
 
 Examples:
 
-- FedaPay secret credentials: server only
-- Webhook verification: server only
-- Database credentials: server only
-- Admin operations: server only
-- Third-party API secrets: server only
+- FedaPay secret credentials
+- Webhook verification
+- Database credentials
+- Admin operations
+- Third-party API secrets
 
-Never rely on client-side redirects or UI state as proof of a successful payment.
+Never use client-side state, hidden fields, redirects, or UI messages as proof of authorization or payment.
 
-### 5. Validate external input
+### 6. Payments
 
-Treat all user input and third-party payloads as untrusted.
+For FedaPay or another payment provider:
 
-Validate:
+1. Create/initiate transactions safely.
+2. Keep secret credentials server-side.
+3. Determine or validate product, currency, amount and order state server-side.
+4. Verify payment status server-side.
+5. Authenticate provider webhooks according to current official documentation.
+6. Make fulfillment idempotent.
+7. Never unlock a paid product solely because the browser reached a success URL.
+8. Never trust transaction values supplied by the client.
+9. Prevent replay or duplicate fulfillment.
+
+### 7. Input validation
+
+Validate external data at system boundaries:
 
 - Form fields
 - URL parameters
@@ -91,23 +119,9 @@ Validate:
 - Uploaded files
 - External API responses
 
-Use strict schemas where practical and fail safely.
+Validate type, shape, size, format and allowed values where known. Reject invalid input safely.
 
-### 6. Payments
-
-For any future FedaPay integration:
-
-1. Create/initiate the transaction safely.
-2. Keep secret credentials on the server.
-3. Verify payment status server-side.
-4. Validate webhook authenticity/signature according to the provider documentation.
-5. Make fulfillment idempotent.
-6. Never unlock a paid product solely because a browser returned to a success URL.
-7. Never trust an amount, currency, transaction status, or product identifier supplied by the client.
-
-### 7. Accessibility
-
-The website must remain usable without relying exclusively on visual effects.
+### 8. Accessibility
 
 Use:
 
@@ -117,39 +131,39 @@ Use:
 - Accessible labels
 - Sufficient contrast
 - Meaningful link text
-- Alt text for informative images
-- Reduced-motion support where appropriate
+- Appropriate alt text
+- Reduced-motion support
 
-Do not use animation to communicate information that cannot otherwise be accessed.
+Do not make essential information or interactions dependent on animation.
 
-### 8. Performance
+### 9. Performance
 
-The site is intended to feel premium without becoming heavy.
+The site should feel premium without becoming heavy.
 
 Prefer:
 
-- Optimized images
-- Responsive image sizes
-- Lazy loading when appropriate
-- Minimal JavaScript for static content
+- Optimized responsive images
+- Appropriate lazy loading
+- Minimal client-side JavaScript
 - Server rendering where useful
 - Small dependency footprint
 - CSS transforms/opacity for animation
-- Avoiding layout shifts
+- Stable layouts that minimize CLS
+- Avoiding unnecessary hydration
 
-Do not ship large libraries for functionality that can be implemented simply with the platform.
+Measure before introducing complex performance optimizations.
 
-### 9. Motion and visual design
+### 10. Motion and visual design
 
-The visual direction is:
+Visual direction:
 
 **Tech × Editorial × Cinematic × Human**
 
-Motion should support hierarchy, storytelling and perceived quality. Avoid generic cyberpunk aesthetics, excessive neon, gratuitous 3D and motion that harms usability or performance.
+Motion should support hierarchy, storytelling and perceived quality. Avoid generic cyberpunk aesthetics, excessive neon, gratuitous 3D, and motion that harms usability or performance.
 
-Respect `prefers-reduced-motion`.
+Respect `prefers-reduced-motion` and ensure animated states have usable non-animated equivalents.
 
-### 10. SEO and sharing
+### 11. SEO and sharing
 
 Every public page should have deliberate:
 
@@ -157,28 +171,28 @@ Every public page should have deliberate:
 - Meta description
 - Canonical URL where appropriate
 - Open Graph metadata
-- Twitter/X card metadata where appropriate
+- X/Twitter card metadata where appropriate
 - Semantic heading hierarchy
 - Descriptive URLs
 
-Do not generate misleading metadata or keyword spam.
+Do not use misleading metadata, hidden text, or keyword stuffing.
 
-### 11. Content integrity
+### 12. Content integrity
 
-Do not invent:
+Never invent:
 
 - Client results
 - Revenue figures
 - Testimonials
 - Partnerships
 - Credentials
-- Product capabilities
 - Certifications
 - User counts
+- Product capabilities
 
-If information is not verified, mark it as unknown or ask for the source.
+If a claim is not verified, mark it as unknown or request its source.
 
-### 12. Components and code organization
+### 13. Components and code organization
 
 Prefer small components with one clear responsibility.
 
@@ -186,53 +200,105 @@ Avoid:
 
 - Giant page components
 - Repeated magic numbers
-- Deeply coupled components
+- Deep coupling
 - Unnecessary global state
 - Duplicate business logic
 
 Keep business logic separate from presentation when that improves testability and clarity.
 
-### 13. TypeScript
+### 14. TypeScript
 
 When TypeScript is used:
 
 - Prefer strict typing.
-- Avoid `any` unless there is a documented reason.
+- Avoid `any` unless justified at a documented boundary.
 - Type external data at the boundary.
 - Prefer discriminated unions for finite states.
-- Avoid type assertions that hide runtime uncertainty.
+- Avoid assertions that hide runtime uncertainty.
+- Keep public types intentional and minimal.
 
-### 14. Error handling
+### 15. Error handling and observability
 
 Errors must be explicit and actionable.
 
-Do not silently swallow exceptions.
+Do not silently swallow exceptions. User-facing errors should be safe and understandable. Server diagnostics must not expose secrets or unnecessary personal data.
 
-User-facing errors should be safe and understandable. Server logs may contain diagnostic context but must not expose secrets or unnecessary personal data.
+Use structured logging where appropriate and avoid logging credentials, payment secrets, tokens or sensitive personal data.
 
-### 15. Dependencies
+### 16. Dependencies and supply chain
 
-Before adding a dependency, ask:
+Before adding a dependency, verify:
 
-- Is it necessary?
-- Is the package maintained?
-- Does it solve a real problem?
-- Can the platform or existing stack do this adequately?
-- Does it increase bundle size or attack surface significantly?
+- It solves a real requirement.
+- It is maintained or otherwise justified.
+- Its license is compatible with the project.
+- Its security and transitive dependency risk is acceptable.
+- The platform or existing stack cannot reasonably provide the same capability.
 
-Do not add a dependency only because it is fashionable.
+Prefer lockfiles and reproducible installs. Avoid arbitrary remote scripts and unpinned CI dependencies when practical.
 
 ## Required validation before push
 
-Before pushing application changes, run the project checks that exist in the repository, preferably:
+Run the checks that actually exist in the repository. Prefer, when configured:
 
 - Formatting
 - Linting
 - Type checking
 - Unit/integration tests
 - Production build
+- Relevant security/dependency checks
 
-If a check cannot be run, state that explicitly in the commit/PR summary.
+Never report a check as passed unless it was actually run. If a check is unavailable, state that it was not run rather than implying success.
+
+## Four-pass review protocol
+
+Every meaningful change should be reviewed from four different perspectives before it is considered ready.
+
+### Pass 1 — Functional correctness
+
+Ask:
+
+- Does the implementation satisfy the requirement?
+- Are edge cases handled?
+- Are loading, success and failure states coherent?
+- Are existing behaviors preserved?
+
+### Pass 2 — Security and trust boundaries
+
+Ask:
+
+- Can untrusted input cross a boundary without validation?
+- Can a client influence authorization, price, ownership or payment state?
+- Are secrets exposed in source, logs, client bundles or errors?
+- Are webhooks authenticated and idempotent?
+- Are dependencies and integrations reasonably controlled?
+
+### Pass 3 — Quality and resilience
+
+Ask:
+
+- Is the code type-safe and maintainable?
+- Does it behave on mobile and desktop?
+- Is it accessible by keyboard and assistive technology?
+- Is the performance cost justified?
+- Are errors observable without leaking sensitive information?
+- Is the implementation unnecessarily complex?
+
+### Pass 4 — Adversarial and product review
+
+Assume the implementation will be used incorrectly or attacked.
+
+Ask:
+
+- What happens with malformed input?
+- What happens if an API is unavailable?
+- What happens if a request is repeated?
+- What happens if a user bypasses the UI?
+- What happens under slow networks or small screens?
+- Does the implementation actually improve the user's journey?
+- Does the diff contain unrelated work?
+
+Only after all four passes should the change be considered ready.
 
 ## Git workflow
 
@@ -255,9 +321,7 @@ Never force-push or rewrite shared history unless explicitly requested.
 
 ## Review standard: +10 levels
 
-A change is not considered complete merely because it works visually.
-
-Before declaring a feature finished, review it across these dimensions:
+A change is not complete merely because it works visually. Review it across:
 
 1. Correctness
 2. Type safety
@@ -270,21 +334,22 @@ Before declaring a feature finished, review it across these dimensions:
 9. Maintainability
 10. User experience
 
-Then perform a final pass for unnecessary complexity and remove anything that does not provide measurable value.
+Then perform a final simplification pass: remove anything that does not provide measurable value.
 
 ## Definition of done
 
 A feature is done when:
 
-- It satisfies the requested behavior.
-- It works on mobile and desktop.
-- It has no obvious accessibility regression.
-- It has no known secret exposure.
+- Requested behavior is implemented.
+- Mobile and desktop behavior is considered.
+- No obvious accessibility regression remains.
+- No known secret exposure remains.
 - External input is validated.
+- Sensitive operations are authorized server-side.
 - Errors are handled safely.
-- Existing checks pass.
-- The production build succeeds when applicable.
-- The implementation is documented when behavior is non-obvious.
+- Relevant checks pass, or their absence is explicitly documented.
+- Production build succeeds when a build exists.
+- Non-obvious behavior is documented.
 - The diff contains no unrelated changes.
 
 ## Agent behavior
@@ -299,3 +364,4 @@ Agents working in this repository must:
 - Never claim a security property that was not verified.
 - Never commit secrets.
 - Never fabricate external integrations.
+- Never hide failed checks or known limitations.
